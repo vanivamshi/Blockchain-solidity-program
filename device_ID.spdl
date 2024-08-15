@@ -1,0 +1,95 @@
+usertype  NonceRequest;
+usertype JoinRequest;
+usertype RequestApproved;
+usertype Reputation;
+usertype UniqueID;
+usertype EncryptionSecret;
+usertype OldID;
+hashfunction h;
+usertype TimeStamp;
+usertype xor;
+# C,A,B are device addresses
+
+protocol Block(C,A,B)
+{
+    role C
+    {
+        fresh nc: Nonce;
+        var na,nb: Nonce;
+        fresh Tc: TimeStamp;
+        var Tb,Ta: TimeStamp;
+	var Sec: EncryptionSecret;
+	var UID: UniqueID;
+	var RApp: RequestApproved;
+	fresh NReq: NonceRequest;
+	fresh OID: OldID;
+	fresh JReq: JoinRequest;
+	fresh Rep: Reputation;
+
+        send_1(C,A, {{NReq,OID,nc,Tc,C}sk(A)} pk(C) );
+        recv_2(A,C, {na,h(na,nc),{h(na,Ta)}sk(C)}pk(A) );
+	claim(C,Running,A,na,nc);
+	send_4(C,B, {JReq,C,nc,Rep,Ta,{na,h(na,Ta)}sk(B)}pk(C) );
+	recv_5(B,C, {{RApp,UID,Sec,nb,Tb}sk(C)}pk(B) );   #extra nb,B
+
+        #claim(C,Secret,nc);
+        #claim(C,Secret,na);
+	#claim(C,Alive);
+        #claim(C,Weakagree);
+        claim(C,Commit,A,na,nc);
+        claim(C,Commit,B,nb,nc);
+        claim(C,Niagree);
+	claim(C,Nisynch);
+    }    
+    
+    role A
+    {
+        fresh na: Nonce;
+        var nb,nc: Nonce;
+        fresh Ta: TimeStamp;
+        var Tc: TimeStamp;
+	var NReq: NonceRequest;
+	var OID: OldID;
+
+        recv_1(C,A, {{NReq,OID,nc,Tc,C}sk(A)} pk(C) );
+	claim(A,Running,C,na,nc);
+        send_2(A,C, {na,h(na,nc),{h(na,Ta)}sk(C)}pk(A) );
+	send_3(A,B, {{A,Tc,na,h(na,Ta)}sk(B)}pk(A) );
+
+	claim(A,Running,B,na);
+        claim(A,Secret,na);
+        claim(A,Secret,nc);
+	#claim(A,Alive);
+        #claim(A,Weakagree);
+        #claim(A,Commit,C,nc,na);
+        #claim(A,Commit,B,na);
+        claim(A,Niagree);
+	claim(A,Nisynch);
+    }
+
+    role B
+    {
+        var na,nc: Nonce;
+	fresh nb: Nonce;
+        fresh Tb: TimeStamp;
+        var Ta,Tc: TimeStamp;
+	var OldID: OldID;
+	var JReq: JoinRequest;
+	var Rep: Reputation;
+	fresh RApp: RequestApproved;
+	fresh UID: UniqueID;
+	fresh Sec: EncryptionSecret;
+
+	recv_3(A,B, {{A,Tc,na,h(na,Ta)}sk(B)}pk(A) );
+	recv_4(C,B, {JReq,C,nc,Rep,Tc,{na,h(na,Ta)}sk(B)}pk(C) );
+	send_5(B,C, {{RApp,UID,Sec,nb,Tb}sk(C)}pk(B) );   #extra nb,B
+
+        claim(B,Secret,na);
+	claim(B,Alive);
+        claim(B,Weakagree);
+        claim(B,Commit,A,na);
+        claim(B,Commit,C,na,nb);
+        claim(B,Niagree);
+	claim(B,Nisynch);
+    }
+}
